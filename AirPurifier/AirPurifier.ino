@@ -28,22 +28,18 @@
  
 /////////////////////////////////////////////////////////
 //                                                     //
-//   HomeSpan Reference Sketch: Air Purifier Service   //
+//         Homespan参考草图：空气净化器服务             //
 //                                                     //
 /////////////////////////////////////////////////////////
 
-// As of iOS 17.2.1, the Home App provides the following Air Purifier functionality:
-// 
-//  * a Master Switch allows you to set the Active Characteristic to either ACTIVE or INACTIVE
-//  * a duplicate of this same functionality is available via a toggle button labeled "Mode" on the 
-//    Settings Screen that also allows you to set the Active Characteristic to either ACTIVE or INACTIVE
-//  * two selector buttons on the Settings Screen allow you to set the TargetAirPurifierState Characteristic
-//    to either AUTO or MANUAL
+//从iOS 17.2.1开始，家庭应用程序提供以下空气净化器功能：
 //
-//    NOTE: When changing the state of the Accessory from INACTIVE to ACTIVE via either the Master Switch or
-//    the duplicate "Mode" toggle on the Settings Screen, the Home App automatically sets TargetAirPurifierState
-//    to AUTO.  If you want to operate in MANUAL mode, you must select that option *after* first setting
-//    the Accessory to ACTIVE.  In other words, the Home App always "starts" the Purifier in AUTO mode
+// *主开关允许您将活动特性设置为活动或无效
+// *可以通过在设置屏幕上标记为“模式”的切换按钮获得相同功能的重复，这也使您可以将活动特征设置为活动或无效
+//*设置屏幕上的两个选择器按钮允许您将targetAirPurifierState设置为自动或手动的特征
+//
+//注意：通过主开关或重复的“模式”切换在“设置”屏幕上，将附件的状态从不活动变为活动时，HOME App自动将TargetAirPurifierState设置为自动。 
+//如果要在手动模式下操作，则必须在 *首先设置Active的附件后选择该选项 *。 换句话说，家庭应用总是在自动模式下“启动”净化器
 //
  
 #include "HomeSpan.h"
@@ -63,8 +59,8 @@ struct AirFilter : Service::FilterMaintenance {
 
   boolean update() override {
     if(filterReset.updated()){
-      filterLife.setVal(100);                               // reset filter life to 100%
-      filterChange.setVal(filterChange.NO_CHANGE_NEEDED);   // reset filter change indicator
+      filterLife.setVal(100);                               // 将过滤寿命重置为100％
+      filterChange.setVal(filterChange.NO_CHANGE_NEEDED);   // 重置过滤器更改指示器
     }
 
     return(true);
@@ -99,7 +95,7 @@ struct Purifier : Service::AirPurifier {
 
   Purifier() : Service::AirPurifier() {
 
-    addLink(&preFilter);          // AirFilters need to be linked to the AirPurifier to show up in HomeKit, but will work in Eve even if not linked
+    addLink(&preFilter);          // 空气过滤器需要与空气净化器相关
     addLink(&hepaFilter);
   }
 
@@ -124,21 +120,21 @@ struct Purifier : Service::AirPurifier {
 
   void loop() override {
 
-    // if the master switch is set to INACTIVE, make sure the Accessory is also INACTIVE regardless of whether in MANUAL or AUTO mode
-
+    // 如果将主开关设置为非活动性，请确保附件也无效，无论是在手动还是自动模式下
+   
     if(active.getVal()==active.INACTIVE && currentState.getVal()!=currentState.INACTIVE){
       LOG0("Purifier is turning OFF.\n");
       currentState.setVal(currentState.INACTIVE);
     }
 
-    // if in MANUAL mode and the master switch is set to ACTIVE, make sure the Accessory is PURIFYING
+    // 如果以手动模式和主开关设置为活动，请确保附件正在净化
     
     else if(targetState.getVal()==targetState.MANUAL && active.getVal()==active.ACTIVE && currentState.getVal()!=currentState.PURIFYING){
       LOG0("Purifier is PURIFYING.\n");
       currentState.setVal(currentState.PURIFYING);
     }
     
-    // if in AUTO mode and the master switch is set to ACTIVE, make sure the Accessory is either PURIFYING or IDLE depending on Air Quality Sensor
+    // 如果以自动模式和主开关设置为活动，请确保配件要么净化或闲置，具体取决于空气质量传感器
 
     else if(targetState.getVal()==targetState.AUTO && active.getVal()==active.ACTIVE && currentState.getVal()==currentState.INACTIVE){
       LOG0("Purifier is IDLE.\n");
