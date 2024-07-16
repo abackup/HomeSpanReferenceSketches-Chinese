@@ -27,7 +27,7 @@
 
 ////////////////////////////////////////////////////////////////////
 //                                                                //
-//   HomeSpan Reference Sketch: Humidifier/DeHumidifier Service   //
+//            HomeSpan 参考草图：加湿器/除湿器服务                 //
 //                                                                //
 ////////////////////////////////////////////////////////////////////
 
@@ -35,8 +35,8 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-// Here we create a dummmy humidity sensor that can be used as a real sensor in the Humidifier Service below.
-// Rather than read a real humidity sensor, this structure allows you to change the current humidifier via the Serial Monitor
+// 这里我们创建了一个虚拟湿度传感器，可以在下面的加湿器服务中用作真实传感器。
+// 与读取真实湿度传感器不同，此结构允许您通过串行监视器更改当前加湿器
 
 struct DummyHumiditySensor {
   static float relativeHumidity;
@@ -55,7 +55,7 @@ float DummyHumiditySensor::relativeHumidity;
 
 struct Reference_HumidifierDehumidifier : Service::HumidifierDehumidifier {
 
-  // Create characteristics, set initial values, and set storage in NVS to true
+  // 创建特性、设置初始值，并将 NVS 中的存储设置为 true
 
   Characteristic::Active active{0,true};
   Characteristic::CurrentRelativeHumidity humidity{70,true};
@@ -67,13 +67,13 @@ struct Reference_HumidifierDehumidifier : Service::HumidifierDehumidifier {
   Characteristic::WaterLevel water{50,true};
   Characteristic::RotationSpeed fan{0,true};
 
-  DummyHumiditySensor humiditySensor{70};                                             // instantiate a dummy humidity sensor with initial humidity=70%
+  DummyHumiditySensor humiditySensor{70};                                             // 实例化一个初始湿度为 70% 的虚拟湿度传感器
  
   Reference_HumidifierDehumidifier() : Service::HumidifierDehumidifier() {
     Serial.printf("\n*** Creating HomeSpan Humidifier/DeHumidifer ***\n");
     
-//    targetState.setValidValues(1,1);      // uncomment this to restrict allowed mode to Humidify only
-//    targetState.setValidValues(1,2);      // uncomment this to restrict allowed mode to Dehumidify only
+//    targetState.setValidValues(1,1);      // 取消注释以将允许的模式限制为仅加湿
+//    targetState.setValidValues(1,2);      // 取消注释以将允许的模式限制为仅除湿
 
   }
 
@@ -105,7 +105,7 @@ struct Reference_HumidifierDehumidifier : Service::HumidifierDehumidifier {
       }
     }
 
-    // NOTE:  HomeKit always updates both thresholds even if you only change one
+    // 注意：即使你只更改一个阈值，HomeKit 也会更新两个阈值
     
     if(humidThreshold.updated() && humidThreshold.getNewVal<float>()!=humidThreshold.getVal<float>())
       Serial.printf("Humidifier Threshold changed to %g\n",humidThreshold.getNewVal<float>());
@@ -116,49 +116,49 @@ struct Reference_HumidifierDehumidifier : Service::HumidifierDehumidifier {
     return(true);
   }
 
-  // Here's where all the main logic exists to turn on/off humidifying/dehumidifying by comparing the current humidity to the devices's current settings
+  // 这里是所有主要逻辑所在，通过比较当前湿度和设备的当前设置来打开/关闭加湿/除湿
 
   void loop() override {
 
-    float humid=humiditySensor.read();       // read humidity sensor (which in this example is just a dummy sensor)
+    float humid=humiditySensor.read();       // 读取湿度传感器（在此示例中，它只是一个虚拟传感器）
     
-    if(humid<0)                   // limit value to stay between 0 and 100
+    if(humid<0)                   // 限制值保持在 0 到 100 之间
       humid=0;
     if(humid>100)
       humid=100;
 
-    if(humidity.timeVal()>5000 && fabs(humidity.getVal<float>()-humid)>0.25){      // if it's been more than 5 seconds since last update, and humidity has changed
+    if(humidity.timeVal()>5000 && fabs(humidity.getVal<float>()-humid)>0.25){      // 如果距离上次更新已超过 5 秒，并且湿度已发生变化
       humidity.setVal(humid);                                                       
       Serial.printf("Current humidity is now %g\n",humidity.getVal<float>());
     } 
 
-    if(active.getVal()==0){                                               // power is OFF
-      if(currentState.getVal()!=0){                                       // if current state is NOT Inactive
-        Serial.printf("Humidifier/DeHumidifier State: INACTIVE\n");       // set to Inactive
+    if(active.getVal()==0){                                               // 电源关闭
+      if(currentState.getVal()!=0){                                       // 如果当前状态不是非活动状态
+        Serial.printf("Humidifier/DeHumidifier State: INACTIVE\n");       // 设置为非活动状态
         currentState.setVal(0);
       }
-      return;                                                             // return since there is nothing more to check when device if OFF
+      return;                                                             // 返回，因为当设备关闭时没有其他需要检查的内容
     }
 
-    if(humidity.getVal<float>()<humidThreshold.getVal<float>() && targetState.getVal()!=2){    // humidity is too low and mode allows for humidifying
-      if(currentState.getVal()!=2){                                                          // if current state if NOT humidifying
-        Serial.printf("Humidifier/DeHumidifier State: HUMIDIFYING\n");                       // set to Humidifying
+    if(humidity.getVal<float>()<humidThreshold.getVal<float>() && targetState.getVal()!=2){    // 湿度太低，模式允许加湿
+      if(currentState.getVal()!=2){                                                          // 如果当前状态不是加湿
+        Serial.printf("Humidifier/DeHumidifier State: HUMIDIFYING\n");                       // 设置为加湿
         currentState.setVal(2);
       }
      return;
     }
 
-    if(humidity.getVal<float>()>dehumidThreshold.getVal<float>() && targetState.getVal()!=1){  // humidity is too high and mode allows for dehumidifying
-      if(currentState.getVal()!=3){                                                          // if current state if NOT dehumidifying
-        Serial.printf("Humidifier/DeHumidifier State: DE-HUMIDIFYING\n");                    // set to Dehumidifying
+    if(humidity.getVal<float>()>dehumidThreshold.getVal<float>() && targetState.getVal()!=1){  // 湿度太高，模式允许除湿
+      if(currentState.getVal()!=3){                                                          // 如果当前状态不是除湿
+        Serial.printf("Humidifier/DeHumidifier State: DE-HUMIDIFYING\n");                    // 设置为除湿
         currentState.setVal(3);
       }
      return;
     }
 
-    if(currentState.getVal()!=1){                                         // state should be Idle, but it is NOT
+    if(currentState.getVal()!=1){                                         // 状态应该为空闲，但事实并非如此
        currentState.setVal(1);
-       Serial.printf("Humidifier/DeHumidifier State: IDLE\n");            // set to Idle        
+       Serial.printf("Humidifier/DeHumidifier State: IDLE\n");            // 设置为空闲 
     }
   }
 
