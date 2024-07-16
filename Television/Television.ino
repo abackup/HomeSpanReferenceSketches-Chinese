@@ -27,7 +27,7 @@
 
  ///////////////////////////////////////////////////////
 //                                                   //
-//   HomeSpan Reference Sketch: Television Service   //
+//             HomeSpan 参考草图：电视服务            //
 //                                                   //
 ///////////////////////////////////////////////////////
 
@@ -51,18 +51,18 @@ sourceData_t sourceData[NUM_SOURCES]={
 };
 
 ////////////////////////////////////////////////////////////////////////
-///// TvInput Service - used by Television Service further below ///////
+/////           TvInput 服务 - 由下面的电视服务使用               ///////
 ////////////////////////////////////////////////////////////////////////
 
 struct TvInput : Service::InputSource {
 
-  SpanCharacteristic *sourceName;                                    // name of input source
-  SpanCharacteristic *sourceID;                                      // ID of input source
-  Characteristic::IsConfigured configured{1,true};                   // indicates whether input source is configured
-  Characteristic::CurrentVisibilityState currentVis{0,true};         // current input source visibility (0=VISIBLE)
-  Characteristic::TargetVisibilityState targetVis{0,true};           // target input source visibility
+  SpanCharacteristic *sourceName;                                    // 输入源名称
+  SpanCharacteristic *sourceID;                                      // 输入源ID
+  Characteristic::IsConfigured configured{1,true};                   // 表示是否配置了输入源
+  Characteristic::CurrentVisibilityState currentVis{0,true};         // 当前输入源可见性（0=VISIBLE）
+  Characteristic::TargetVisibilityState targetVis{0,true};           // 目标输入源可见性
 
-  static int numSources;                                             // number of input sources
+  static int numSources;                                             // 输入源数量
   
   TvInput(int id, const char *name) : Service::InputSource() {
     sourceName = new Characteristic::ConfiguredName(name,true);
@@ -83,7 +83,7 @@ struct TvInput : Service::InputSource {
 };
 
 ////////////////////////////////////////////////////////////////////////
-///// TvSpeaker Service - used by Television Service further below /////
+/////           TvSpeaker 服务 - 由下面的电视服务使用               /////
 ////////////////////////////////////////////////////////////////////////
 
 struct TvSpeaker : Service::TelevisionSpeaker {
@@ -110,31 +110,31 @@ struct TvSpeaker : Service::TelevisionSpeaker {
 
 struct HomeSpanTV : Service::Television {
 
-  Characteristic::Active power{0,true};                    // TV power
-  Characteristic::ActiveIdentifier inputSource{1,true};    // current TV Input Source
-  Characteristic::RemoteKey remoteKey;                     // used to receive button presses from the Remote Control widget
-  Characteristic::PowerModeSelection settingsKey;          // adds "View TV Settings" option to Selection Screen
+  Characteristic::Active power{0,true};                    // 电视电源
+  Characteristic::ActiveIdentifier inputSource{1,true};    // 当前电视输入源
+  Characteristic::RemoteKey remoteKey;                     // 用于接收来自远程控制小部件的按钮按下操作
+  Characteristic::PowerModeSelection settingsKey;          // 在选择屏幕中添加“查看电视设置”选项
   
-  SpanCharacteristic *tvName;                                   // name of TV (will be instantiated in constructor below)
-  Characteristic::DisplayOrder displayOrder{NULL_TLV,true};     // sets the order in which the Input Sources will be displayed in the Home App
+  SpanCharacteristic *tvName;                                   // 电视名称（将在下面的构造函数中实例化）
+  Characteristic::DisplayOrder displayOrder{NULL_TLV,true};     // 设置输入源在 Home App 中的显示顺序
 
   HomeSpanTV(const char *name) : Service::Television() {
     tvName = new Characteristic::ConfiguredName(name,true);
     
     Serial.printf("Creating Television Service '%s'\n",tvName->getString());
 
-    TLV8 orderTLV;                                         // create a temporary TLV8 object to store the order in which the Input Sources are to be displayed in the Home App
+    TLV8 orderTLV;                                         // 创建一个临时的 TLV8 对象来存储输入源在 Home App 中的显示顺序
 
     for(int i=0;i<NUM_SOURCES;i++){
-      orderTLV.add(1,sourceData[i].ID);                    // add ID of Input Source to TLV8 record used for displayOrder
+      orderTLV.add(1,sourceData[i].ID);                    // 将输入源的 ID 添加到用于 displayOrder 的 TLV8 记录中
       orderTLV.add(0);
       
-      addLink(new TvInput(sourceData[i].ID,sourceData[i].name));    // add link for this Input Source
+      addLink(new TvInput(sourceData[i].ID,sourceData[i].name));    // 添加此输入源的链接
     }
 
-    displayOrder.setTLV(orderTLV);                         // update displayOrder with completed TLV8 records
+    displayOrder.setTLV(orderTLV);                         // 使用已完成的 TLV8 记录更新 displayOrder
 
-    addLink(new TvSpeaker());                              // add link for TV Speaker
+    addLink(new TvSpeaker());                              // 添加电视扬声器的链接
   }
 
   boolean update() override {
@@ -143,32 +143,32 @@ struct HomeSpanTV : Service::Television {
       Serial.printf("Set TV Power to: %s\n",power.getNewVal()?"ON":"OFF");
     }
 
-    if(inputSource.updated()){                                  // request for new Input Source
-      for(auto src : getLinks<TvInput *>("InputSource"))        // loop through all linked TvInput Sources and find one with matching ID
+    if(inputSource.updated()){                                  // 请求新的输入源
+      for(auto src : getLinks<TvInput *>("InputSource"))        // 循环遍历所有链接的 TvInput 源并找到具有匹配 ID 的源
         if(inputSource.getNewVal()==src->sourceID->getVal())
           Serial.printf("Set to Input Source %d: %s\n",src->sourceID->getVal(),src->sourceName->getString());          
     }
 
-    // for fun, use "View TV Settings" to trigger HomeSpan to re-order the Input Sources alphabetically
+    // 为了好玩，使用“查看电视设置”来触发 HomeSpan 按字母顺序重新排列输入源
     
     if(settingsKey.updated()){
       Serial.printf("Received request to \"View TV Settings\"\n");
       
-      // for fun, use "View TV Settings" to trigger HomeSpan to re-order the Input Sources alphabetically
+      // 为了好玩，使用“查看电视设置”来触发 HomeSpan 按字母顺序重新排列输入源
       
       Serial.printf("Alphabetizing Input Sources...\n");
-      auto inputs = getLinks<TvInput *>("InputSource");         // create copy of linked Input Source vector so it can be sorted alphabetically
+      auto inputs = getLinks<TvInput *>("InputSource");         // 创建链接的输入源向量的副本，以便可以按字母顺序排序
                     
       std::sort(inputs.begin(),inputs.end(),[](TvInput *i, TvInput *j)->boolean{return(strcmp(i->sourceName->getString(),j->sourceName->getString())<0);});
 
-      TLV8 orderTLV;                                            // create a temporary TLV8 object to store the order in which the Input Sources are to be displayed in the Home App
+      TLV8 orderTLV;                                            // 创建一个临时的 TLV8 对象来存储输入源在 Home App 中的显示顺序
 
       for(auto src : inputs){
         orderTLV.add(1,src->sourceID->getVal());
         orderTLV.add(0);
       }
 
-    displayOrder.setTLV(orderTLV);                              // update displayOrder Characteristic with TLV8 record
+    displayOrder.setTLV(orderTLV);                              // 使用 TLV8 记录更新 displayOrder 特性
     }
     
     if(remoteKey.updated()){
@@ -219,7 +219,7 @@ void setup() {
   new SpanAccessory();   
     new Service::AccessoryInformation(); 
       new Characteristic::Identify();
-    new HomeSpanTV("Test TV");              // instantiate a Television with name="Test TV"
+    new HomeSpanTV("Test TV");              // 实例化名称为“Test TV”的电视
 }
 
 ///////////////////////////////
