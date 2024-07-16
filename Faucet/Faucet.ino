@@ -28,7 +28,7 @@
  
 ///////////////////////////////////////////////////////
 //                                                   //
-//   HomeSpan Reference Sketch: Faucet Service       //
+//          HomeSpan 参考草图：水龙头服务             //
 //                                                   //
 ///////////////////////////////////////////////////////
 
@@ -44,9 +44,9 @@ struct Sprayer : Service::Valve {
   SpanCharacteristic *name;
 
   Sprayer(const char *sprayerName) : Service::Valve() {
-    new Characteristic::ValveType(2);                               // Set Valve Type = Shower Head
-    name=new Characteristic::ConfiguredName(sprayerName,true);      // This Characteristic was introduced for TV Services, but works well here
-    enabled->addPerms(PW);                                          // Adding "PW" to the IsConfigured Characteristic allows for enabling/disabling valves
+    new Characteristic::ValveType(2);                               // 设置阀门类型 = 淋浴喷头
+    name=new Characteristic::ConfiguredName(sprayerName,true);      // 此特性是为电视服务引入的，但在这里运行良好
+    enabled->addPerms(PW);                                          // 将“PW”添加到 IsConfigured 特性可以启用/禁用阀门
   }
 
   boolean update() override {
