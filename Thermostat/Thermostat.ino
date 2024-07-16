@@ -28,19 +28,19 @@
 
 ///////////////////////////////////////////////////////
 //                                                   //
-//   HomeSpan Reference Sketch: Thermostat Service   //
+//            HomeSpan 参考草图：恒温器服务           //
 //                                                   //
 ///////////////////////////////////////////////////////
 
 #include "HomeSpan.h"
 
-#define MIN_TEMP  0         // minimum allowed temperature in celsius
-#define MAX_TEMP  40        // maximum allowed temperature in celsius
+#define MIN_TEMP  0         // 最低允许温度（摄氏度）
+#define MAX_TEMP  40        // 最高允许温度（摄氏度）
 
 ////////////////////////////////////////////////////////////////////////
 
-// Here we create a dummmy temperature sensor that can be used as a real sensor in the Thermostat Service below.
-// Rather than read a real temperature sensor, this structure allows you to change the current temperature via the Serial Monitor
+// 这里我们创建了一个虚拟温度传感器，可以在下面的恒温器服务中用作真实传感器。
+// 此结构允许您通过串行监视器更改当前温度，而不是读取真正的温度传感器
 
 struct DummyTempSensor {
   static float temp;
@@ -60,7 +60,7 @@ float DummyTempSensor::temp;
 
 struct Reference_Thermostat : Service::Thermostat {
 
-  // Create characteristics, set initial values, and set storage in NVS to true
+  // 创建特性、设置初始值，并将 NVS 中的存储设置为 true
 
   Characteristic::CurrentHeatingCoolingState currentState{0,true};
   Characteristic::TargetHeatingCoolingState targetState{0,true}; 
@@ -70,14 +70,14 @@ struct Reference_Thermostat : Service::Thermostat {
   Characteristic::TargetRelativeHumidity targetHumidity{50,true};
   Characteristic::HeatingThresholdTemperature heatingThreshold{22,true};
   Characteristic::CoolingThresholdTemperature coolingThreshold{22,true};  
-  Characteristic::TemperatureDisplayUnits displayUnits{0,true};               // this is for changing the display on the actual thermostat (if any), NOT in the Home App
+  Characteristic::TemperatureDisplayUnits displayUnits{0,true};               // 这是为了更改实际恒温器（如果有）上的显示，而不是在 Home App 中
 
-  DummyTempSensor tempSensor{22};                                             // instantiate a dummy temperature sensor with initial temp=22 degrees C
+  DummyTempSensor tempSensor{22};                                             // 实例化一个初始温度为 22 摄氏度的虚拟温度传感器
  
   Reference_Thermostat() : Service::Thermostat() {
     Serial.printf("\n*** Creating HomeSpan Thermostat***\n");
 
-    currentTemp.setRange(MIN_TEMP,MAX_TEMP);                                  // set all ranges the same to make sure Home App displays them correctly on the same dial
+    currentTemp.setRange(MIN_TEMP,MAX_TEMP);                                  // 将所有范围设置为相同，以确保 Home App 在同一表盘上正确显示它们
     targetTemp.setRange(MIN_TEMP,MAX_TEMP);
     heatingThreshold.setRange(MIN_TEMP,MAX_TEMP);
     coolingThreshold.setRange(MIN_TEMP,MAX_TEMP);    
@@ -117,18 +117,18 @@ struct Reference_Thermostat : Service::Thermostat {
     return(true);
   }
 
-  // Here's where all the main logic exists to turn on/off heating/cooling by comparing the current temperature to the Thermostat's settings
+  // 这里是所有主要逻辑所在，通过比较当前温度和恒温器的设置来打开/关闭加热/冷却
 
   void loop() override {
 
-      float temp=tempSensor.read();       // read temperature sensor (which in this example is just a dummy sensor)
+      float temp=tempSensor.read();       // 读取温度传感器（在此示例中只是一个虚拟传感器）
       
-      if(temp<MIN_TEMP)                   // limit value to stay between MIN_TEMP and MAX_TEMP
+      if(temp<MIN_TEMP)                   // 限制值保持在 MIN_TEMP 和 MAX_TEMP 之间
         temp=MIN_TEMP;
       if(temp>MAX_TEMP)
         temp=MAX_TEMP;
 
-      if(currentTemp.timeVal()>5000 && fabs(currentTemp.getVal<float>()-temp)>0.25){      // if it's been more than 5 seconds since last update, and temperature has changed
+      if(currentTemp.timeVal()>5000 && fabs(currentTemp.getVal<float>()-temp)>0.25){      // 如果距离上次更新已超过 5 秒，并且温度已发生变化
         currentTemp.setVal(temp);                                                       
         Serial.printf("Current Temperature is now %s.\n",temp2String(currentTemp.getNewVal<float>()).c_str());
       } 
@@ -194,7 +194,7 @@ struct Reference_Thermostat : Service::Thermostat {
       }
   }
 
-  // This "helper" function makes it easy to display temperatures on the serial monitor in either F or C depending on TemperatureDisplayUnits
+  // 此“辅助”函数可轻松在串行监视器上显示温度（单位为 F 或 C），具体取决于 TemperatureDisplayUnits
   
   String temp2String(float temp){
     String t = displayUnits.getVal()?String(round(temp*1.8+32.0)):String(temp);
