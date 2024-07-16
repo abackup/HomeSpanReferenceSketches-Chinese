@@ -27,41 +27,36 @@
  
 ///////////////////////////////////////////////////////
 //                                                   //
-//   HomeSpan Reference Sketch: Battery Service      //
+//            HomeSpan 参考草图：电池服务            //
 //                                                   //
 ///////////////////////////////////////////////////////
 
 #include "HomeSpan.h" 
 
 ////////////////////////////////////////////////////////////////////////
-//                        BATTERY CLASS                               //
+//                            电池类                                  //
 ////////////////////////////////////////////////////////////////////////
 
-// This standalone class (separate from HomeSpan) is designed to measure the battery voltage
-// on an Adafruit ESP32 Huzzah Featherboard in which the LiPo is hardwired to pin 35 and
-// battery voltage can be read by analogRead(35).
+// 这个独立类（与 HomeSpan 分开）旨在测量 Adafruit ESP32 Huzzah Featherboard 上的电池电压，其中 LiPo 硬连线到引脚 35，并且可以通过 analogRead(35) 读取电池电压。
 
-// These analog values range from about 1850 (battery just about drained) to over 2400 (battery fully charged).
+// 这些模拟值的范围从大约 1850（电池刚好耗尽）到 2400 以上（电池充满电）。
 
-// In addition, by connecting the USB voltage pin on the ESP32 to digital pin 21 through a voltage divider
-// consisting of two 10K ohm resistors, it is possible to determine whether or not the ESP is plugged
-// into USB power by calling digitalRead(21).  This can be used to determine whether or not the battery is
-// being charged.
+// 此外，通过将 ESP32 上的 USB 电压引脚通过由两个 10K 欧姆电阻组成的分压器连接到数字引脚 21，可以通过调用 digitalRead(21) 来确定 ESP 是否插入 USB 电源。这可用于确定电池是否正在充电。
 
-// The class supports the following two methods:
+// 此类支持以下两种方法：
 //
-//  * int getPercentCharged() - returns 0-100
-//  * int getChargingState() - returns 1 if ESP32 is plugged into USB power, else returns 0
+//  * int getPercentCharged() - 返回 0-100
+//  * int getChargingState() - 如果 ESP32 插入 USB 电源则返回 1，否则返回 0
 
-// Note: battery voltage is automatically checked by this class in a background task that runs every second.
+// 注意：此类会在每秒运行的后台任务中自动检查电池电压。
 
 class BATTERY {
   
-  int batteryPin;         // pin to use for an analog read of Battery Voltage
-  int usbPin;             // pin to use for a digital read of USB Voltage
-  int minReading;         // min expected analog value of Battery Voltage (corresponding to 0% charged)
-  int maxReading;         // max expected analog value of Battery Voltage (corresponding to 100% charged)
-  float analogReading;    // analog reading of the Battery Voltage
+  int batteryPin;         // 用于模拟读取电池电压的引脚
+  int usbPin;             // 用于数字读取 USB 电压的引脚
+  int minReading;         // 电池电压的最小预期模拟值（对应 0% 充电）
+  int maxReading;         // 电池电压的最大预期模拟值（对应 100% 充电）
+  float analogReading;    // 电池电压的模拟读数
 
   public:
 
@@ -72,12 +67,12 @@ class BATTERY {
     this->maxReading=maxReading;
     analogReading=maxReading;
         
-    pinMode(usbPin,INPUT_PULLDOWN);     // set usbPin to input mode
+    pinMode(usbPin,INPUT_PULLDOWN);     // 将 usbPin 设置为输入模式
     
-    xTaskCreateUniversal(batteryUpdate, "batteryTaskHandle", 4096, this, 1, NULL, 0);   // start background task to measure analogRead(35)
+    xTaskCreateUniversal(batteryUpdate, "batteryTaskHandle", 4096, this, 1, NULL, 0);   // 启动后台任务来测量模拟读数(35)
   }
 
-  // returns percent charged from 0-100
+  // 返回 0-100 之间的充电百分比
   
   int getPercentCharged(){
     int percentCharged=100.0*(analogReading-minReading)/(maxReading-minReading);
@@ -102,17 +97,17 @@ class BATTERY {
     BATTERY *b = (BATTERY*)args;
     for(;;){
       b->analogReading*=0.9;
-      b->analogReading+=0.1*analogRead(b->batteryPin);      // use exponential smoothing
+      b->analogReading+=0.1*analogRead(b->batteryPin);      // 使用指数平滑法
       delay(1000);
     }
   }
   
 };
 
-BATTERY Battery(35,21,1850,2400);     // create a global instance of the BATTERY Class for use by the Battery Service below
+BATTERY Battery(35,21,1850,2400);     // 创建 BATTERY 类的全局实例，供下面的电池服务使用
 
 ////////////////////////////////////////////////////////////////////////
-//                        HomeSpan Code                               //
+//                        HomeSpan 代码                               //
 ////////////////////////////////////////////////////////////////////////
 
 struct SimpleLED : Service::LightBulb {
@@ -151,10 +146,10 @@ struct SimpleBattery : Service::BatteryService{
   
   void loop() override {
         
-    if(Battery.getChargingState()!=chargingState->getVal())          // update Charging State immediately if changed
+    if(Battery.getChargingState()!=chargingState->getVal())          // 如果发生变化，立即更新充电状态
       chargingState->setVal(Battery.getChargingState());
 
-    if(percentCharged->timeVal()>5000 && Battery.getPercentCharged()!=percentCharged->getVal()){   // update Percent Charged only once every 5 seconds if changed
+    if(percentCharged->timeVal()>5000 && Battery.getPercentCharged()!=percentCharged->getVal()){   // 更新百分比收费仅每 5 秒一次，如果更改
       percentCharged->setVal(Battery.getPercentCharged());
       lowBattery->setVal(Battery.getPercentCharged()<lowPercent?1:0);
     }
@@ -172,8 +167,8 @@ void setup() {
   new SpanAccessory(); 
     new Service::AccessoryInformation(); 
       new Characteristic::Identify();                
-    new SimpleLED(13);                      // create a LightBulb Service operating a simple LED pin 13
-    new SimpleBattery(20);                  // create a Battery Service using 20% as the threshold for a low-battery warning in the Home App
+    new SimpleLED(13);                      // 创建一个 LightBulb 服务，操作一个简单的 LED 引脚 13
+    new SimpleBattery(20);                  // 在“家庭”应用中创建电池服务，使用 20% 作为低电量警告的阈值
 }
 
 ////////////////////////////////////////////////////////////////////////
