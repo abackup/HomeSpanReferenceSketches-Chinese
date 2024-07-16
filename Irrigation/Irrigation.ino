@@ -28,14 +28,14 @@
  
 ///////////////////////////////////////////////////////
 //                                                   //
-//   HomeSpan Reference Sketch: Irrigation Service   //
+//           HomeSpan 参考草图：灌溉服务              //
 //                                                   //
 ///////////////////////////////////////////////////////
  
 #include "HomeSpan.h"
 
-#define  HEAD_DURATION    20       // default duration, in seconds, for each Head to stay open (can be configured for each Head in Home App)
-#define  HEAD_SPEED       5000     // the time, in milliseconds, it takes for valve to open/close and water to fully flow or stop flowing
+#define  HEAD_DURATION    20       // 每个 Head 保持打开的默认持续时间（以秒为单位）（可以在 Home App 中为每个 Head 配置）
+#define  HEAD_SPEED       5000     // 阀门打开/关闭以及水完全流动或停止流动所需的时间（以毫秒为单位）
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -49,9 +49,9 @@ struct Head : Service::Valve {
   SpanCharacteristic *name;
 
   Head(const char *headName) : Service::Valve() {
-    new Characteristic::ValveType(1);                           // Set Valve Type = Irrigation
+    new Characteristic::ValveType(1);                           // 设置阀门类型 = 灌溉
     name=new Characteristic::ConfiguredName(headName,true);     
-    enabled->addPerms(PW);                                      // Adding "PW" to the IsConfigured Characteristic allows for enabling/disabling valves
+    enabled->addPerms(PW);                                      // 将“PW”添加到 IsConfigured 特性可以启用/禁用阀门
   }
 
   boolean update() override {
@@ -97,8 +97,8 @@ struct Head : Service::Valve {
       }
     }
 
-    // Below we simulate valves that take some fixed time to open/close so that changes in InUse lags changes in Active.
-    // The Home App will accurately reflect this intermediate state by displaying "Waiting..." when a value is initially opened.
+    // 下面我们模拟需要一些固定时间来打开/关闭的阀门，以便 InUse 中的变化滞后于 Active 中的变化。
+    // 当最初打开一个值时，Home App 将通过显示“等待...”来准确反映这种中间状态。
     
     if(active->timeVal()>HEAD_SPEED && active->getVal()!=inUse->getVal()){
       inUse->setVal(active->getVal());
@@ -112,52 +112,50 @@ struct Head : Service::Valve {
 
 struct Sprinkler : Service::IrrigationSystem {
 
-  // In this configuration we will LINK one or more Heads (i.e. Valve Services) to the Irrigation Service, INSTEAD of
-  // having the Irrigation Service be a standalone Service with unlinked Valves.  This means that the Home App will
-  // not display a separate "master" control for the Irrigation Service, and will instead automatically determine whether
-  // the system is Active according to whether one more values are Active.
+  // 在此配置中，我们将一个或多个主管（即阀门服务）链接到灌溉服务，而不是将灌溉服务作为具有未链接阀门的独立服务。
+  // 这意味着 Home App 将不会为灌溉服务显示单独的“主”控件，而是根据一个或多个值是否处于活动状态来自动确定系统是否处于活动状态。
 
-  SpanCharacteristic *programMode=new Characteristic::ProgramMode(0);   // HomeKit requires this Characteristic, but it is only for display purposes in the Home App
-  SpanCharacteristic *active=new Characteristic::Active(0);             // though in this configuration the Home App will not display a "master" control, the Active Characteristic is still required
-  SpanCharacteristic *inUse=new Characteristic::InUse(0);               // though in this configuration the Home App will not display a "master" control, the InUse Characteristic is still required
+  SpanCharacteristic *programMode=new Characteristic::ProgramMode(0);   // HomeKit 需要此特性，但它仅用于在 Home App 中显示
+  SpanCharacteristic *active=new Characteristic::Active(0);             // 虽然在此配置中 Home App 不会显示“主”控件，但仍然需要 Active Characteristic
+  SpanCharacteristic *inUse=new Characteristic::InUse(0);               // 虽然在此配置中 Home App 不会显示“主”控件，但仍然需要 InUse Characteristic
   
-  vector<Head *> heads;                                                 // OPTIONAL: vector to store list of linked Heads that will be used for running a scheduled program
-  vector<Head *>::iterator currentHead;                                 // OPTIONAL: pointer to the current head in a scheduled program
+  vector<Head *> heads;                                                 // 可选：用于存储用于运行预定程序的链接头列表的向量
+  vector<Head *>::iterator currentHead;                                 // 可选：指向预定程序中的当前头的指针
 
   Sprinkler(uint8_t numHeads) : Service::IrrigationSystem() {
     
-    for(int i=1;i<=numHeads;i++){              // create Heads (Valves) and link each to the Sprinkler object
+    for(int i=1;i<=numHeads;i++){              // 创建喷头（阀门）并将每个喷头链接到洒水器对象
       char name[16];
-      sprintf(name,"Head-%d",i);               // unique name for each Head that can be changed in the Home App
+      sprintf(name,"Head-%d",i);               // 每个头部都有唯一名称，可在 Home App 中更改
       addLink(new Head(name));
     }
     
-    for(auto s : getLinks())                  // OPTIONAL: add each linked Head into storage vector for easy access below
+    for(auto s : getLinks())                  // 可选：将每个链接的头部添加到存储向量中，以便于在下面轻松访问
       heads.push_back((Head *)s);
       
-    new SpanUserCommand('p', "- starts/stops scheduled program",startProgram,this);     // OPTIONAL: allows user to start a schedule program to sequentially turn on each enabled Head
+    new SpanUserCommand('p', "- starts/stops scheduled program",startProgram,this);     // 可选：允许用户启动计划程序，按顺序打开每个启用的 Head
   }
 
-  static void startProgram(const char *buf, void *arg){     // OPTIONAL: start scheduled program
+  static void startProgram(const char *buf, void *arg){     // 可选：启动预定程序
     
-    Sprinkler *sprinkler=(Sprinkler *)arg;                      // recast the second arguments into a Sprinkler
+    Sprinkler *sprinkler=(Sprinkler *)arg;                      // 将第二个参数重新转换为 Sprinkler
         
-    for(auto s : sprinkler->getLinks()) {                       // loop over all linked Services
-      Head *head = (Head *)s;                                   // recast linked Service to a Head
-      if(head->enabled->getVal() && head->active->getVal())     // if Head is both enabled and active
-        head->active->setVal(0);                                // turn off Heads
+    for(auto s : sprinkler->getLinks()) {                       // 循环遍历所有链接的服务
+      Head *head = (Head *)s;                                   // 重塑与头部相关的服务
+      if(head->enabled->getVal() && head->active->getVal())     // 如果 Head 已启用且处于活动状态
+        head->active->setVal(0);                                // 关掉 head
     }
 
-    sprinkler->currentHead=sprinkler->heads.begin();                       // reset current head in scheduled program
-    sprinkler->active->setVal(0);                                          // set sprinkler Active to false
-    sprinkler->programMode->setVal(!sprinkler->programMode->getVal());     // toggle Program Mode
+    sprinkler->currentHead=sprinkler->heads.begin();                       // 在预定程序中重置当前头
+    sprinkler->active->setVal(0);                                          // 将洒水器活动设置为 false
+    sprinkler->programMode->setVal(!sprinkler->programMode->getVal());     // 切换程序模式
 
     Serial.printf("Scheduled program: %s\n",sprinkler->programMode->getVal()?"STARTED":"STOPPED");
   }
 
-  void loop(){                                              // OPTIONAL: only needed to support the running of scheduled programs
+  void loop(){                                              // 可选：仅需要支持预定程序的运行
      
-    if(!programMode->getVal())      // program mode not started
+    if(!programMode->getVal())      // 程序模式未启动
       return;
 
     if(currentHead==heads.end()){
@@ -167,29 +165,29 @@ struct Sprinkler : Service::IrrigationSystem {
       return;
     }
 
-    if(!(*currentHead)->enabled->getVal()){      // current Head is not enabled
-      currentHead++;                             // advance to next Head
+    if(!(*currentHead)->enabled->getVal()){      // 当前 Head 未启用
+      currentHead++;                             // 晋级至下一任 Head 
       return;
     }
 
-    if((*currentHead)->active->getVal()){        // current Head is Active
-      if(!active->getVal()){                     // if sprinkler Active is still false (because user manually turned on Head)...
-        active->setVal(1);                       // ...set sprinkler Active to true
+    if((*currentHead)->active->getVal()){        // 当前负责人处于活动状态
+      if(!active->getVal()){                     // 如果洒水器活动仍然为假（因为用户手动打开了喷头）...
+        active->setVal(1);                       // ...将洒水器活动设置为 true
         Serial.printf("Scheduled program: %s is ALREADY OPEN\n",(*currentHead)->name->getString());
       }
       return;
       
-    } else if((*currentHead)->inUse->getVal()){  // current Head is not Active but still InUse
+    } else if((*currentHead)->inUse->getVal()){  // 当前负责人未处于活动状态但仍在使用中
       return;
     }
     
-    if(!active->getVal()){                       // current Head is not Active nor InUse and sprinkler Active is false...
-      active->setVal(1);                         // ...set sprinkler Active to true and turn on Head
+    if(!active->getVal()){                       // 当前喷头未处于活动状态，也未处于使用状态，并且洒水器活动状态为假......
+      active->setVal(1);                         // ...将洒水器 Active 设置为 true 并打开头部
       (*currentHead)->active->setVal(1);
       (*currentHead)->remainingDuration->setVal((*currentHead)->setDuration->getVal());
       Serial.printf("Scheduled program: %s is OPENING\n",(*currentHead)->name->getString());
       
-    } else if(!(*currentHead)->inUse->getVal()){  // wait for water to stop flowing in current Head before moving to next Head
+    } else if(!(*currentHead)->inUse->getVal()){  // 等待当前水头停止流动，然后移至下一个水头
       active->setVal(0,false);
       currentHead++;      
     }
@@ -210,7 +208,7 @@ void setup() {
     new Service::AccessoryInformation();  
       new Characteristic::Identify();                           
                    
-    new Sprinkler(4);       // create Sprinkler with 4 Heads
+    new Sprinkler(4);       // 创建 4 头洒水器
 }
 
 ////////////////////////////////////////////////////////////////////////
